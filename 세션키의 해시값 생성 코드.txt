@@ -1,0 +1,127 @@
+//  Copyright (C) Microsoft. All rights reserved.
+//  
+//  CreateAndHashSessionKey.cpp : Defines the entry point for the 
+//  application.
+//
+
+
+#include <stdio.h>
+#include <windows.h>
+#include <Wincrypt.h>
+
+// Link with the Crypt32.lib file.
+#pragma comment (lib, "Crypt32")
+
+#define MY_ENCODING_TYPE  (PKCS_7_ASN_ENCODING | X509_ASN_ENCODING)
+
+
+void main()
+{
+    HCRYPTPROV hCryptProv;
+    HCRYPTHASH hHash;
+    HCRYPTKEY hKey;
+
+    //---------------------------------------------------------------
+    // Acquire a cryptographic provider context handle.
+    if (CryptAcquireContext(
+        &hCryptProv,
+        NULL,
+        NULL,
+        PROV_RSA_FULL,
+        0))
+    {
+        printf("CryptAcquireContext complete. \n");
+    }
+    else
+    {
+        printf("error\n");
+    }
+
+    //---------------------------------------------------------------
+    // Create a hash object.
+    // 빈 해쉬 오브젝트 생성
+    if (CryptCreateHash(
+        hCryptProv,
+        CALG_MD5,
+        0,
+        0,
+        &hHash))
+    {
+        printf("An empty hash object has been created. \n");
+    }
+    else
+    {
+        printf("error\n");
+    }
+
+    //---------------------------------------------------------------
+    // Create a random session key.
+    // 랜덤 키 생성
+    if (CryptGenKey(
+        hCryptProv,
+        CALG_RC2,
+        CRYPT_EXPORTABLE,
+        &hKey))
+    {
+        printf("A random session key has been created. \n");
+    }
+    else
+    {
+        printf("error\n");
+    }
+
+    //---------------------------------------------------------------
+    // Compute the cryptographic hash on the key object.
+    // Session 키를 해쉬하여 해쉬 오브젝트에 추가
+    if (CryptHashSessionKey(
+        hHash,
+        hKey,
+        0))
+    {
+        printf("The session key has been hashed. \n");
+    }
+    else
+    {
+        printf("error\n");
+    }
+
+    /*
+    Use the hash of the key object. For instance, additional data
+    could be hashed and sent in a message to several recipients. The
+    recipients will be able to verify who the message originator is
+    if the key used is also exported to them.
+    */
+
+    //---------------------------------------------------------------
+    // Clean up.
+
+    // Destroy the hash object.
+
+    if (hHash)
+    {
+        if (!(CryptDestroyHash(hHash)))
+        {
+            printf("error\n");
+        }
+    }
+
+    // Destroy the session key.
+    if (hKey)
+    {
+        if (!(CryptDestroyKey(hKey)))
+        {
+            printf("error\n");
+        }
+    }
+
+    // Release the provider.
+    if (hCryptProv)
+    {
+        if (!(CryptReleaseContext(hCryptProv, 0)))
+        {
+            printf("error\n");
+        }
+    }
+} // End main.
+
+//  Define function MyHandleError.
